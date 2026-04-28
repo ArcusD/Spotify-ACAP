@@ -11,18 +11,6 @@
         },
         "configuration": {
             "settingPage": "index.html",
-            "httpConfig": [
-                {
-                    "type": "transferCgi",
-                    "name": "state.cgi",
-                    "access": "admin"
-                },
-                {
-                    "type": "transferCgi",
-                    "name": "log.cgi",
-                    "access": "admin"
-                }
-            ],
             "paramConfig": [
                 {
                     "name": "DeviceName",

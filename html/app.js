@@ -113,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     async function pollState() {
         try {
-            const response = await fetch('/local/spotifyconnect/state.cgi?t=' + Date.now());
+            const response = await fetch('/local/spotifyconnect/state.json?t=' + Date.now());
             if(response.ok) {
                 const data = await response.json();
                 updatePlayerUI(data);

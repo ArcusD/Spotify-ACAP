@@ -61,8 +61,13 @@ RUN . /etc/environment && \
 # Update manifest.json with the correct architecture before building
 
 # Fix line endings and make scripts executable
-RUN dos2unix event_handler.sh state.cgi log.cgi && \
-    chmod +x event_handler.sh state.cgi log.cgi
+RUN dos2unix event_handler.sh && \
+    chmod +x event_handler.sh
+
+# Create symlinks in html/ so the web server can serve the log and state directly
+RUN cd html && \
+    ln -s ../localdata/state.json state.json && \
+    ln -s ../localdata/librespot.log librespot.log
 
 # Build and package
-RUN . /opt/axis/acapsdk/environment-setup* && acap-build . -a librespot -a event_handler.sh -a state.cgi -a log.cgi
+RUN . /opt/axis/acapsdk/environment-setup* && acap-build . -a librespot -a event_handler.sh
