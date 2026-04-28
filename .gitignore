@@ -1,0 +1,20 @@
+# Build outputs
+*.eap
+*.o
+spotifyconnect
+librespot
+
+# Axis generated files
+package.conf
+package.conf.orig
+param.conf
+
+# Logs
+*.log
+
+# Git submodules / downloaded source
+/librespot
+
+# OS files
+.DS_Store
+Thumbs.db
