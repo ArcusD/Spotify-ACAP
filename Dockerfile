@@ -36,8 +36,8 @@ WORKDIR /build
 RUN git clone https://github.com/librespot-org/librespot.git
 WORKDIR /build/librespot
 
-# Optimize Cargo.toml for minimal binary size
-RUN echo '\n[profile.release]\nopt-level = "z"\nlto = true\ncodegen-units = 1\npanic = "abort"\nstrip = true' >> Cargo.toml
+# Optimize Cargo.toml for performance and minimal binary size
+RUN echo '\n[profile.release]\nopt-level = 3\nlto = true\ncodegen-units = 1\npanic = "abort"\nstrip = true' >> Cargo.toml
 
 # Build librespot with alsa backend and discovery
 RUN . /etc/environment && . $HOME/.cargo/env && \

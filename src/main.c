@@ -59,6 +59,9 @@ int main(int argc, char *argv[]) {
             "--name", device_name,
             "--bitrate", bitrate,
             "--backend", "alsa",
+            "--mixer", "softvol",
+            "--volume-ctrl", "log",
+            "--disable-audio-cache",
             "--initial-volume", "100",
             "--onevent", "./event_handler.sh",
             NULL
