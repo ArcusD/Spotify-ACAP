@@ -1,57 +1,50 @@
-# Axis Spotify Connect ACAP (WIP)
+# Spotify Connect ACAP for Axis Speakers (Audio Manager Edge)
 
-> ⚠️ **WORK IN PROGRESS**: This project is currently in active development. It is functional (audio streaming works via PipeWire on Axis OS 12) but has not been extensively tested on all firmware versions or devices. Use at your own risk.
-
-An ACAP (Axis Camera Application Platform) application that turns an Axis network audio device (like the Axis I8116 intercom) into a Spotify Connect receiver.
-
-This application cross-compiles the Rust-based [librespot](https://github.com/librespot-org/librespot) client for the ARM architectures used in Axis cameras and integrates it securely into Axis OS 12 using the PipeWire audio backend.
+This project provides a robust Spotify Connect receiver tailored for Axis network speakers running **Audio Manager Edge** (e.g., the Axis C1210-E). It seamlessly integrates into the Axis ecosystem by registering via D-Bus, allowing you to manage Spotify audio just like any other native audio source (paging, SIP, etc.) with proper priority and zone routing.
 
 ## Features
-- **Spotify Connect integration**: Stream music directly from the Spotify app to your Axis intercom/speaker.
-- **Embedded Web Interface**: Modern, dark-themed GUI accessible directly from the camera's IP to view playback status and debug logs.
-- **Optimized for Axis OS 12**: Uses the required `pipewire` group and ALSA layer to ensure compatibility with modern Axis firmwares.
-- **Lightweight**: Extensively stripped and link-time-optimized binary to fit within the small flash memory of embedded devices (~2.7MB `.eap` package).
+- **Native Audio Manager Edge Integration**: Dynamically registers as an eligible audio source via D-Bus (`com.axis.AudioConf.Application`).
+- **Dynamic ALSA Routing**: Automatically discovers the correct virtual audio loopback (e.g., `loopbacksink_6`) created by Axis and pipes audio directly into it, fully bypassing hardware strictness and sample rate mismatches.
+- **Robust Buffer Negotiation**: Uses `aplay` under the hood to ensure perfect communication with Axis ALSA loopbacks, completely preventing the notorious `Invalid argument (22)` ALSA crashes.
+- **Hardware Agnostic**: Because the ACAP requests its ALSA sink dynamically from the speaker, this application should theoretically run flawlessly on any Axis speaker supporting Audio Manager Edge.
 
-## Architectures
-Axis cameras run on different processors. This project provides builds for the two primary architectures:
-1. **aarch64**: For newer devices with ARTPEC-8 or Ambarella CV25 processors (e.g., Axis I8116).
-2. **armv7hf**: For older devices with ARTPEC-6 or ARTPEC-7 processors.
+## Prerequisites
+- **Hardware**: An Axis network speaker (e.g., C1210-E) running Audio Manager Edge.
+- **Software**: Docker Desktop installed on your build machine.
 
-## Installation
+## Building the ACAP (.eap file)
 
-You can find the pre-built `.eap` files in the `builds/` directory of this repository.
+The project includes a `Dockerfile` that cross-compiles `librespot` (the core Spotify Connect client) for the ARM architecture of your Axis speaker using the official Axis ACAP SDK.
 
-1. Download the correct `.eap` file for your camera's architecture:
-   - `Spotify_Connect_1_0_0_aarch64.eap`
-   - `Spotify_Connect_1_0_0_armv7hf.eap`
-2. Upload the `.eap` file via the Axis Web interface (`Apps` tab).
-3. Start the application and open the App interface to configure the device name and view logs.
+1. Build the Docker image for your speaker's architecture. For the C1210-E, use `armv7hf` (ARTPEC-7):
+   ```bash
+   docker build --build-arg ARCH=armv7hf -t spotify-connect-builder-armv7hf .
+   ```
+   *(Note: For ARTPEC-8 devices like the I8116-E, use `ARCH=aarch64`)*
 
-## Building from source
+2. Extract the compiled `.eap` package from the container:
+   ```powershell
+   $id = docker create spotify-connect-builder-armv7hf
+   docker cp "$($id):/opt/app/Spotify_Connect_1_0_0_armv7hf.eap" "./Spotify_Connect_armv7hf.eap"
+   docker rm $id
+   ```
 
-You can compile the ACAP packages yourself using the provided Dockerfile.
+## Installation & Configuration
 
-**For aarch64 (ARTPEC-8 / Ambarella CV25):**
-```bash
-docker build --build-arg ARCH=aarch64 -t spotify-acap-aarch64 .
-docker create --name temp-aarch64 spotify-acap-aarch64
-docker cp temp-aarch64:/opt/app/Spotify_Connect_1_0_0_aarch64.eap ./builds/
-docker rm temp-aarch64
-```
+1. **Install the App**: Log into the web interface of your Axis speaker. Navigate to **Apps** and upload the `.eap` file you just built.
+2. **Configure**: Click on the Spotify Connect app in the list. Here you can configure:
+   - **DeviceName**: The name that will show up in your Spotify app (e.g., "Kantine Speaker").
+   - **Bitrate**: Default is 320 kbps.
+   - **AudioSourceName**: The internal name used by Audio Manager Edge (leave default).
+3. **Start**: Start the app. 
+4. **Audio Manager Edge**: Go to Audio -> Audio Manager Edge. You will now see your Spotify Connect app listed as an eligible audio source!
+5. **Play**: Open Spotify on your phone or PC, select your Axis speaker from the Devices menu, and hit play!
 
-**For armv7hf (ARTPEC-6 / ARTPEC-7):**
-```bash
-docker build --build-arg ARCH=armv7hf -t spotify-acap-armv7hf .
-docker create --name temp-armv7hf spotify-acap-armv7hf
-docker cp temp-armv7hf:/opt/app/Spotify_Connect_1_0_0_armv7hf.eap ./builds/
-docker rm temp-armv7hf
-```
+## Troubleshooting
 
-## Technical Details
+- **No Sound?**: Ensure the app is actually started in the Apps menu. Verify in Audio Manager Edge that the volume is not muted and the app has the correct priority.
+- **Forbidden - Blocked due to brute force protection**: This is a standard Axis security feature. If you refresh the Axis web UI too fast, you will be temporarily blocked. Wait 5 minutes or physically reboot the speaker (PoE unplug).
+- **Checking Logs**: You can view the internal logs by SSH'ing into the camera or via the App's configuration page if exposed: `cat localdata/librespot.log`.
 
-- Relies on `librespot` for the Spotify Connect protocol.
-- Includes a C wrapper that interfaces with the `axparameter` API to manage settings like `DeviceName` and `Bitrate`.
-- Employs a custom Bash script and CGI endpoints to poll playback events and serve them to the web UI.
-
-## License
-MIT License. See the [LICENSE](LICENSE) file for more information.
+## Acknowledgments
+Powered by [librespot-org/librespot](https://github.com/librespot-org/librespot).

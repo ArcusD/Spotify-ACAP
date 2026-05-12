@@ -29,6 +29,10 @@ RUN apt-get update && apt-get install -y \
     pkg-config \
     build-essential \
     libclang-dev \
+    libasound2-dev \
+    libgstreamer1.0-dev \
+    libgstreamer-plugins-base1.0-dev \
+    libpipewire-0.3-dev \
     dos2unix
 
 # Clone and build librespot
@@ -39,7 +43,7 @@ WORKDIR /build/librespot
 # Optimize Cargo.toml for performance and minimal binary size
 RUN echo '\n[profile.release]\nopt-level = 3\nlto = true\ncodegen-units = 1\npanic = "abort"\nstrip = true' >> Cargo.toml
 
-# Build librespot with alsa backend and discovery
+# Build librespot with ALSA backend and discovery
 RUN . /etc/environment && . $HOME/.cargo/env && \
     RUST_TARGET_ENV=$(echo $RUST_TARGET | tr '-' '_') && \
     TARGET_UPPER=$(echo $RUST_TARGET | tr '-' '_' | tr '[:lower:]' '[:upper:]') && \
@@ -47,14 +51,15 @@ RUN . /etc/environment && . $HOME/.cargo/env && \
     export CARGO_TARGET_${TARGET_UPPER}_LINKER=$RUST_LINKER && \
     export CC_${RUST_TARGET_ENV}=$RUST_LINKER && \
     export PKG_CONFIG_ALLOW_CROSS=1 && \
-    export PKG_CONFIG_PATH=$SYSROOT/usr/lib/pkgconfig && \
+    export PKG_CONFIG_PATH="$SYSROOT/usr/lib/pkgconfig:$SYSROOT/usr/share/pkgconfig" && \
     export RUSTFLAGS="-L $SYSROOT/usr/lib -L $SYSROOT/lib -Clink-arg=--sysroot=$SYSROOT" && \
+    export LIBASOUND_STATIC=0 && \
     cargo build --release --target $RUST_TARGET --no-default-features --features "alsa-backend,with-libmdns,rustls-tls-webpki-roots"
 
 # Build the ACAP application
 WORKDIR /opt/app
 COPY . .
-# Copy the built librespot binary
+# Copy the built librespot binary and asound.conf
 RUN . /etc/environment && \
     cp /build/librespot/target/$RUST_TARGET/release/librespot .
 
