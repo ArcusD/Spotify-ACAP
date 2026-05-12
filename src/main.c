@@ -183,7 +183,7 @@ static void start_librespot(char *device_name, char *bitrate, char *final_device
         int log_fd = open("localdata/librespot.log", O_WRONLY | O_CREAT | O_APPEND, 0644);
         if (log_fd >= 0) { dup2(log_fd, STDERR_FILENO); close(log_fd); }
 
-        setenv("RUST_LOG", "info", 1);
+        setenv("RUST_LOG", "librespot=info,libmdns=error", 1);
 
         char aplay_cmd[512];
         snprintf(aplay_cmd, sizeof(aplay_cmd), "aplay -D %s -f S16_LE -r 44100 -c 2", final_device);
