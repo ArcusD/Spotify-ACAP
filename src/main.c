@@ -195,7 +195,7 @@ static void start_librespot(char *device_name, char *bitrate, char *final_device
             "--device",         aplay_cmd,
             "--bitrate",        bitrate,
             "--mixer",          "softvol",
-            "--initial-volume", "100",
+            "--initial-volume", "10",
             "--volume-ctrl",    "linear",
             "--cache",          "localdata",
             "--onevent",        "./event_handler.sh",
