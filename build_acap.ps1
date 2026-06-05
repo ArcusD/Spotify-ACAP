@@ -20,7 +20,7 @@ foreach ($Arch in $Archs) {
     $ContainerId = docker create spotify-connect-builder-$Arch
     
     # Identify the .eap file in the container
-    $EapFile = "spotifyconnect_$($Version)_$($Arch).eap"
+    $EapFile = "Spotify_Connect_$($Version.Replace('.','_'))_$($Arch).eap"
     
     # Copy the file out
     Write-Host "Extracting $EapFile..."
