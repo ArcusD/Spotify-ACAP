@@ -36,8 +36,11 @@ The project includes a `Dockerfile` that cross-compiles `librespot` (the core Sp
    - **DeviceName**: The name that will show up in your Spotify app (e.g., "Kantine Speaker").
    - **Bitrate**: Default is 320 kbps.
    - **AudioSourceName**: The internal name used by Audio Manager Edge (leave default).
-3. **Start**: Start the app. 
-4. **Audio Manager Edge**: Go to Audio -> Audio Manager Edge. You will now see your Spotify Connect app listed as an eligible audio source!
+3. **Start**: Start the app.
+4. Go to Audio -> **Audio Manager Edge**:
+   - **Opening hours**: Enable all days and select time from 00:00 to 24:00.
+   - **Music**: Create schedule -> Give it a Name -> Select "Opening hours" -> Create. Select Spotify as Source and Save.
+   - **Playback**: Select Spotify under **Music control** tab.
 5. **Play**: Open Spotify on your phone or PC, select your Axis speaker from the Devices menu, and hit play!
 
 ## Troubleshooting
