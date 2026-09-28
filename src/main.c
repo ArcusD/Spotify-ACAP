@@ -26,6 +26,7 @@
 #include <time.h>
 #include <axparameter.h>
 #include <gio/gio.h>
+#include <microhttpd.h>
 
 static volatile int keep_running = 1;
 static pid_t librespot_pid = -1;
@@ -37,6 +38,61 @@ static pthread_cond_t  reg_cond  = PTHREAD_COND_INITIALIZER;
 
 /* The AudioSourceName parameter value — read from ACAP params */
 static char audio_source_name[128] = "SpotifyConnect";
+
+static struct MHD_Daemon *mhd_daemon = NULL;
+
+static enum MHD_Result answer_to_connection(void *cls, struct MHD_Connection *connection,
+                                            const char *url, const char *method,
+                                            const char *version, const char *upload_data,
+                                            size_t *upload_data_size, void **con_cls)
+{
+    if (strcmp(method, "GET") != 0)
+        return MHD_NO;
+
+    const char *filepath = NULL;
+    if (strcmp(url, "/api/state") == 0) {
+        filepath = "localdata/state.json";
+    } else if (strcmp(url, "/api/log") == 0) {
+        filepath = "localdata/librespot.log";
+    } else {
+        return MHD_NO;
+    }
+
+    int fd = open(filepath, O_RDONLY);
+    if (fd == -1) {
+        if (strcmp(url, "/api/state") == 0) {
+            const char *empty_state = "{\"event\":\"stopped\"}";
+            struct MHD_Response *response = MHD_create_response_from_buffer(strlen(empty_state), (void *)empty_state, MHD_RESPMEM_PERSISTENT);
+            MHD_add_response_header(response, "Content-Type", "application/json");
+            int ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+            MHD_destroy_response(response);
+            return ret;
+        } else {
+            const char *error_msg = "Log not found\n";
+            struct MHD_Response *response = MHD_create_response_from_buffer(strlen(error_msg), (void *)error_msg, MHD_RESPMEM_PERSISTENT);
+            int ret = MHD_queue_response(connection, MHD_HTTP_NOT_FOUND, response);
+            MHD_destroy_response(response);
+            return ret;
+        }
+    }
+
+    struct stat stat_buf;
+    if (fstat(fd, &stat_buf) != 0) {
+        close(fd);
+        return MHD_NO;
+    }
+
+    struct MHD_Response *response = MHD_create_response_from_fd(stat_buf.st_size, fd);
+    if (strcmp(url, "/api/state") == 0) {
+        MHD_add_response_header(response, "Content-Type", "application/json");
+    } else {
+        MHD_add_response_header(response, "Content-Type", "text/plain");
+    }
+
+    int ret = MHD_queue_response(connection, MHD_HTTP_OK, response);
+    MHD_destroy_response(response);
+    return ret;
+}
 
 void handle_sigterm(int sig) {
     keep_running = 0;
@@ -217,6 +273,15 @@ int main(int argc, char *argv[]) {
 
     mkdir("localdata", 0755);
 
+    /* Start HTTP daemon */
+    mhd_daemon = MHD_start_daemon(MHD_USE_SELECT_INTERNALLY, 8000, NULL, NULL,
+                                  &answer_to_connection, NULL, MHD_OPTION_END);
+    if (!mhd_daemon) {
+        syslog(LOG_ERR, "Failed to start libmicrohttpd daemon on port 8000");
+    } else {
+        syslog(LOG_INFO, "Internal HTTP server listening on port 8000");
+    }
+
     /* Read ACAP parameters */
     AXParameter *ax_parameter = ax_parameter_new("spotifyconnect", NULL);
     char *device_name = NULL;
@@ -283,6 +348,9 @@ cleanup:
     if (librespot_pid > 0) {
         kill(librespot_pid, SIGTERM);
         waitpid(librespot_pid, NULL, 0);
+    }
+    if (mhd_daemon) {
+        MHD_stop_daemon(mhd_daemon);
     }
     keep_running = 0;
     pthread_join(dbus_tid, NULL);

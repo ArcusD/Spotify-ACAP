@@ -2,7 +2,7 @@
 # This script builds the Spotify Connect ACAP for both armv7hf and aarch64
 # and moves the results to the builds/ directory.
 
-$Version = "1.0.0"
+$VersionStr = "2_0_0"
 $Archs = @("armv7hf", "aarch64")
 
 foreach ($Arch in $Archs) {
@@ -20,11 +20,11 @@ foreach ($Arch in $Archs) {
     $ContainerId = docker create spotify-connect-builder-$Arch
     
     # Identify the .eap file in the container
-    $EapFile = "spotifyconnect_$($Version)_$($Arch).eap"
+    $EapFile = "Spotify_Connect_$($VersionStr)_$($Arch).eap"
     
     # Copy the file out
     Write-Host "Extracting $EapFile..."
-    docker cp "$($ContainerId):/opt/app/$EapFile" "./builds/Spotify_Connect_$($Version)_$($Arch).eap"
+    docker cp "$($ContainerId):/opt/app/$EapFile" "./builds/$EapFile"
     
     # Cleanup
     docker rm $ContainerId

@@ -35,6 +35,21 @@ RUN apt-get update && apt-get install -y \
     libpipewire-0.3-dev \
     dos2unix
 
+# Cross-compile libmicrohttpd into the target sysroot
+RUN curl -O https://ftp.gnu.org/gnu/libmicrohttpd/libmicrohttpd-0.9.75.tar.gz && \
+    tar -xzf libmicrohttpd-0.9.75.tar.gz && \
+    cd libmicrohttpd-0.9.75 && \
+    . /opt/axis/acapsdk/environment-setup* && \
+    if [ "$ARCH_ENV" = "aarch64" ]; then \
+        HOST_TARGET="aarch64-linux-gnu"; \
+    else \
+        HOST_TARGET="arm-linux-gnueabihf"; \
+    fi && \
+    SYSROOT_PATH=$(find /opt/axis/acapsdk/sysroots -maxdepth 1 -name "${ARCH_ENV}*" | head -n 1) && \
+    ./configure --host=$HOST_TARGET --prefix=$SYSROOT_PATH/usr --disable-https --disable-doc --disable-examples && \
+    make -j$(nproc) && \
+    make install
+
 # Clone and build librespot
 WORKDIR /build
 RUN git clone https://github.com/librespot-org/librespot.git
@@ -68,11 +83,6 @@ RUN . /etc/environment && \
 # Fix line endings and make scripts executable
 RUN dos2unix event_handler.sh && \
     chmod +x event_handler.sh
-
-# Create symlinks in html/ so the web server can serve the log and state directly
-RUN cd html && \
-    ln -s ../localdata/state.json state.json && \
-    ln -s ../localdata/librespot.log librespot.log
 
 # Build and package
 RUN . /opt/axis/acapsdk/environment-setup* && acap-build . -a librespot -a event_handler.sh

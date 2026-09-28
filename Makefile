@@ -3,7 +3,7 @@ OBJS1 = src/main.o
 
 PROGS = $(PROG1)
 
-PKGS = axparameter gio-2.0 glib-2.0
+PKGS = axparameter gio-2.0 glib-2.0 libmicrohttpd
 
 CFLAGS += $(shell pkg-config --cflags $(PKGS))
 LDLIBS += $(shell pkg-config --libs $(PKGS)) -lpthread
