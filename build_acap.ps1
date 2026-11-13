@@ -1,34 +1,43 @@
 # ACAP Build Script
-# This script builds the Spotify Connect ACAP for both armv7hf and aarch64
-# and moves the results to the builds/ directory.
+# Builds the Spotify Connect ACAP for every chipset family used in Axis
+# network speakers and puts each package in builds/<chipset>/.
+#
+# One build serves several chipsets: the package only depends on the CPU
+# architecture and the SDK version. The SDK version follows the newest
+# AXIS OS the speakers can run: the i.MX 6ULL models stop at AXIS OS 11.11
+# LTS, so they get a build from ACAP Native SDK 1.15 (AXIS OS 11.11);
+# everything else gets SDK 12.1 (AXIS OS 12.1 and later).
 
 $Version = "1.0.0"
-$Archs = @("armv7hf", "aarch64")
+$VersionTag = $Version.Replace('.', '_')
 
-foreach ($Arch in $Archs) {
-    Write-Host "--- Building for $Arch ---" -ForegroundColor Cyan
-    
-    # Build the docker image
-    docker build --build-arg ARCH=$Arch -t spotify-connect-builder-$Arch .
-    
+$Builds = @(
+    @{ Arch = "armv7hf"; Sdk = "12.1.0"; Folders = @("imx6sx") },
+    @{ Arch = "armv7hf"; Sdk = "1.15.4"; Folders = @("imx6ull") },
+    @{ Arch = "aarch64"; Sdk = "12.1.0"; Folders = @("imx8m-nano", "imx8m-mini") }
+)
+
+foreach ($Build in $Builds) {
+    $Arch = $Build.Arch
+    $Sdk = $Build.Sdk
+    $Image = "spotify-connect-builder-$Arch-sdk$Sdk"
+    Write-Host "--- Building for $Arch (SDK $Sdk) ---" -ForegroundColor Cyan
+
+    docker build --build-arg ARCH=$Arch --build-arg SDK_VERSION=$Sdk -t $Image .
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Build failed for $Arch"
+        Write-Error "Build failed for $Arch (SDK $Sdk)"
         continue
     }
 
-    # Create a temporary container to extract the .eap file
-    $ContainerId = docker create spotify-connect-builder-$Arch
-    
-    # Identify the .eap file in the container
-    $EapFile = "Spotify_Connect_$($Version.Replace('.','_'))_$($Arch).eap"
-    
-    # Copy the file out
-    Write-Host "Extracting $EapFile..."
-    docker cp "$($ContainerId):/opt/app/$EapFile" "./builds/Spotify_Connect_$($Version)_$($Arch).eap"
-    
-    # Cleanup
-    docker rm $ContainerId
-    Write-Host "Successfully built and moved to builds/Spotify_Connect_$($Version)_$($Arch).eap" -ForegroundColor Green
+    # acap-build names the package after the manifest version and architecture.
+    $EapFile = "Spotify_Connect_$($VersionTag)_$($Arch).eap"
+    $ContainerId = docker create $Image
+    foreach ($Folder in $Build.Folders) {
+        New-Item -ItemType Directory -Force "./builds/$Folder" | Out-Null
+        docker cp "$($ContainerId):/opt/app/$EapFile" "./builds/$Folder/$EapFile"
+        Write-Host "Copied to builds/$Folder/$EapFile" -ForegroundColor Green
+    }
+    docker rm $ContainerId | Out-Null
 }
 
 Write-Host "Build process complete!" -ForegroundColor Green
