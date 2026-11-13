@@ -12,6 +12,11 @@ This project provides a robust Spotify Connect receiver tailored for Axis networ
 - **Hardware**: An Axis network speaker (e.g., C1210-E) running Audio Manager Edge.
 - **Software**: Docker Desktop installed on your build machine.
 
+## Pre-built packages
+
+Ready-to-install packages for every Axis network speaker are in [`builds/`](builds/README.md),
+one folder per chipset, each with a `MODELS.md` listing the supported models.
+
 ## Building the ACAP (.eap file)
 
 The project includes a `Dockerfile` that cross-compiles `librespot` (the core Spotify Connect client) for the ARM architecture of your Axis speaker using the official Axis ACAP SDK.
